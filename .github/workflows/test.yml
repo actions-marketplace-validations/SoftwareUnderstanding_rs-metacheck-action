@@ -3,6 +3,8 @@ name: Test the Action
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   test-rsmetacheck:
@@ -16,7 +18,6 @@ jobs:
         # defined in the root of the CURRENT repository.
         uses: ./
         with:
-          input: "https://github.com/${{ github.repository }}"
           verbose: "true"
 
       - name: Verify outputs generated

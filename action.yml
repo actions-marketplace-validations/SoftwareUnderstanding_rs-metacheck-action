@@ -8,7 +8,8 @@ branding:
 inputs:
   input:
     description: 'One or more: GitHub/GitLab URLs, JSON files containing repositories. (e.g. "https://github.com/owner/repo")'
-    required: true
+    required: false
+    default: "https://github.com/${GITHUB_REPOSITORY}"
   skip_somef:
     description: "Skip SoMEF execution and analyze existing SoMEF output files directly."
     required: false
@@ -40,6 +41,24 @@ inputs:
     description: "Include both detected AND undetected pitfalls in the output JSON-LD."
     required: false
     default: "false"
+  config:
+    description: "Path to a TOML configuration file for RsMetaCheck."
+    required: false
+  config_profile:
+    description: "Profile name in the TOML configuration file to use for RsMetaCheck."
+    required: false
+
+outputs:
+  has_pitfalls:
+    description: "'true' if any pitfalls or warnings were detected"
+  total_pitfalls:
+    description: "Total number of pitfalls detected"
+  total_warnings:
+    description: "Total number of warnings detected"
+  pitfalls_found:
+    description: "JSON array of detected pitfall codes (e.g. '[\"P001\",\"P003\"]')"
+  warnings_found:
+    description: "JSON array of detected warning codes (e.g. '[\"W001\",\"W002\"]')"
 
 runs:
   using: "docker"
