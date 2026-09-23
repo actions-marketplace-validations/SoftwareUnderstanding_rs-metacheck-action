@@ -6,7 +6,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install the RsMetaCheck tool from PyPI
-RUN pip install --no-cache-dir rsmetacheck==0.3.5
+RUN pip install --no-cache-dir rsmetacheck==0.3.6
 
 # Copies scripts into the container
 COPY entrypoint.sh /entrypoint.sh

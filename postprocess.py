@@ -29,7 +29,6 @@ def main() -> int:
         data = json.load(f)
 
     summary = data.get("summary", {})
-    total_repos = summary.get("total_repositories_analyzed", 0)
     total_pitfalls = summary.get("total_pitfalls_detected", 0)
     total_warnings = summary.get("total_warnings_detected", 0)
     repo_map = summary.get("evaluated_repositories", {})
@@ -38,7 +37,10 @@ def main() -> int:
     pitfalls_found = []
     warnings_found = []
     for entry in pitfall_entries:
-        code = entry.get("pitfall_code", "")
+        code = entry.get("pitfall_code") or entry.get("warning_code", "")
+        desc = entry.get("pitfall_desc") or entry.get("warning_desc", "")
+        entry["pitfall_code"] = code
+        entry["pitfall_desc"] = desc
         count = entry.get("count", 0)
         if count == 0:
             continue
@@ -72,10 +74,22 @@ def main() -> int:
                 "detected": detected,
             }
 
+    suggestion_map = {}
+    evidence_map = {}
+    for info in per_repo_checks.values():
+        for d in info.get("detected", []):
+            code = d.get("code", "")
+            suggestion = d.get("suggestion", "")
+            evidence = d.get("evidence", "")
+            if code and suggestion and code not in suggestion_map:
+                suggestion_map[code] = suggestion
+            if code and evidence and code not in evidence_map:
+                evidence_map[code] = evidence
+
     if step_summary_path:
         _write_step_summary(
-            step_summary_path, total_repos, total_pitfalls, total_warnings,
-            repo_map, pitfalls_found, warnings_found, per_repo_checks,
+            step_summary_path, total_pitfalls, total_warnings,
+            repo_map, pitfalls_found, warnings_found, per_repo_checks, suggestion_map, evidence_map,
         )
 
     if github_output_path:
@@ -91,8 +105,8 @@ def main() -> int:
     return 1 if pitfalls_found else 0
 
 
-def _write_step_summary(path, total_repos, total_pitfalls, total_warnings,
-                         repo_map, pitfalls_found, warnings_found, per_repo_checks):
+def _write_step_summary(path, total_pitfalls, total_warnings,
+                         repo_map, pitfalls_found, warnings_found, per_repo_checks, suggestion_map, evidence_map):
     with open(path, "a") as f:
         f.write("## RsMetaCheck Results\n\n")
 
@@ -106,9 +120,9 @@ def _write_step_summary(path, total_repos, total_pitfalls, total_warnings,
             status_icon = "✅"
             status_text = "Passed"
 
-        f.write(f"| Status | Repositories | Pitfalls | Warnings |\n")
-        f.write(f"|--------|-------------|----------|----------|\n")
-        f.write(f"| {status_icon} **{status_text}** | {total_repos} | {total_pitfalls} | {total_warnings} |\n\n")
+        f.write(f"| Status | Pitfalls | Warnings |\n")
+        f.write(f"|--------|----------|----------|\n")
+        f.write(f"| {status_icon} **{status_text}** | {total_pitfalls} | {total_warnings} |\n\n")
 
         if repo_map:
             f.write("### Repositories Analyzed\n\n")
@@ -121,26 +135,28 @@ def _write_step_summary(path, total_repos, total_pitfalls, total_warnings,
 
         if pitfalls_found:
             f.write("### Detected Pitfalls\n\n")
-            f.write("| Code | Description | Repos Affected | Rate |\n")
-            f.write("|------|-------------|----------------|------|\n")
+            f.write("| Code | Description | Evidence | Suggestion |\n")
+            f.write("|------|-------------|----------|------------|\n")
             for p in pitfalls_found:
                 code = p.get("pitfall_code", "")
                 desc = p.get("pitfall_desc", "")
-                count = p.get("count", 0)
-                pct = p.get("percentage", 0)
-                f.write(f"| {code} | {desc} | {count} | {pct}% |\n")
+                evidence = evidence_map.get(code, "").replace("\n", " ").replace("|", "\\|")
+                suggestion = suggestion_map.get(code, "")
+                suggestion = suggestion.replace("\n", " ").replace("|", "\\|")
+                f.write(f"| {code} | {desc} | {evidence} | {suggestion} |\n")
             f.write("\n")
 
         if warnings_found:
             f.write("### Detected Warnings\n\n")
-            f.write("| Code | Description | Repos Affected | Rate |\n")
-            f.write("|------|-------------|----------------|------|\n")
+            f.write("| Code | Description | Evidence | Suggestion |\n")
+            f.write("|------|-------------|----------|------------|\n")
             for w in warnings_found:
                 code = w.get("pitfall_code", "")
                 desc = w.get("pitfall_desc", "")
-                count = w.get("count", 0)
-                pct = w.get("percentage", 0)
-                f.write(f"| {code} | {desc} | {count} | {pct}% |\n")
+                evidence = evidence_map.get(code, "").replace("\n", " ").replace("|", "\\|")
+                suggestion = suggestion_map.get(code, "")
+                suggestion = suggestion.replace("\n", " ").replace("|", "\\|")
+                f.write(f"| {code} | {desc} | {evidence} | {suggestion} |\n")
             f.write("\n")
 
         if per_repo_checks:

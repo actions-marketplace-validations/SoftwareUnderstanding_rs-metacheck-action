@@ -55,6 +55,32 @@ if [ -n "$INPUT_CONFIG_PROFILE" ]; then
   CMD="$CMD --config-profile \"$INPUT_CONFIG_PROFILE\""
 fi
 
+# Optionally configure SoMEF with a GitHub token to raise API rate limits
+if [ -n "$INPUT_GITHUB_TOKEN" ]; then
+  echo "GitHub token provided: configuring SoMEF with higher API rate limits..."
+  somef configure -a
+  python3 - "$INPUT_GITHUB_TOKEN" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+token = sys.argv[1]
+cfg = Path.home() / ".somef" / "config.json"
+
+with cfg.open() as fh:
+    data = json.load(fh)
+
+data["GitHubAuthorization"] = "token " + token
+
+os.makedirs(str(cfg.parent), exist_ok=True)
+with cfg.open("w") as fh:
+    os.chmod(str(cfg.parent), 0o700)
+    cfg.chmod(0o600)
+    json.dump(data, fh)
+PY
+fi
+
 echo "Executing RsMetaCheck command:"
 echo "$CMD"
 

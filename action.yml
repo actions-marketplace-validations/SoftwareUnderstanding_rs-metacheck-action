@@ -47,6 +47,9 @@ inputs:
   config_profile:
     description: "Profile name in the TOML configuration file to use for RsMetaCheck."
     required: false
+  github_token:
+    description: "GitHub personal access token passed to SoMEF to raise API rate limits. Optional; leave blank to run unauthenticated. Recommend passing via a GitHub secret (e.g. secrets.GITHUB_TOKEN)."
+    required: false
 
 outputs:
   has_pitfalls:
